@@ -134,12 +134,17 @@ test_output = np.array((test_example)["output"])
 # okay, now the only thing to do is to convert the inputs into an output using a single method...
 
 # Here is an example sequence of transforms to solve 007bbfb7.json
-test_mask = run_transform_on_matrix(test_input, transform_type.identity, None)
-output_matrix = run_transform_on_matrix(test_mask, transform_type.scale_board, [9,9])
-output_matrix = run_transform_on_matrix(output_matrix, transform_type.scale, 3)
-output_matrix = run_transform_on_matrix(output_matrix, transform_type.mask, test_mask)
+for k in range(training_len + 1):
+    input_matrix = test_input
+    output_check = test_output
+    if(k < training_len):
+        input_matrix = training_input[k]
+        output_check = training_output[k]
 
-print(f"output_matrix is:\n {output_matrix}")
+    test_mask = run_transform_on_matrix(input_matrix, transform_type.identity, None)
+    output_matrix = run_transform_on_matrix(test_mask, transform_type.scale_board, [9,9])
+    output_matrix = run_transform_on_matrix(output_matrix, transform_type.scale, 3)
+    output_matrix = run_transform_on_matrix(output_matrix, transform_type.mask, test_mask)
 
-# output whether output matrix is equivalent to the expected output.
-print(f"The output matrix and test output are equal: {np.array_equiv(output_matrix, test_output)}")
+    # output whether output matrix is equivalent to the expected output.
+    print(f"The output matrix and test output are equal: {np.array_equiv(output_matrix, output_check)}")
