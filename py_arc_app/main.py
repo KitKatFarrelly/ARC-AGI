@@ -94,6 +94,44 @@ def run_branch_on_matrix(input_matrix, branch_type):
 def create_matrix_of_dimensions(width, height):
     return 
 
+# Here is an example sequence of transforms to solve 007bbfb7.json
+def solve_example_007bbfb7(input_matrix):
+    test_mask = run_transform_on_matrix(input_matrix, transform_type.identity, None)
+    output_matrix = run_transform_on_matrix(test_mask, transform_type.scale_board, [9,9])
+    output_matrix = run_transform_on_matrix(output_matrix, transform_type.scale, 3)
+    output_matrix = run_transform_on_matrix(output_matrix, transform_type.mask, test_mask)
+    return output_matrix
+
+# This function takes a feature and tries to find it in an input matrix.
+# if it does, output qualities of feature in matrix (color, location, shape)
+# the important thing is to be able to distinguish the relevant qualities of a feature
+# for finding it in a test matrix.
+def find_feature_in_matrix(input_matrix, feature_matrix):
+    # find size of feature. this gives us a patch size to check against on the input matrix
+    feature_height = feature_matrix.shape[0]
+    feature_width = feature_matrix.shape[1]
+
+    # return early if feature matrix is larger than input matrix
+    if(feature_matrix.shape[0] > feature_height or feature_matrix.shape[1] > feature_width):
+        return []
+
+    # loop through each feature-sized patch in the input matrix.
+    feature_start_height = 0
+    while(feature_start_height <= (input_matrix.shape[0] - feature_height)):
+        feature_start_width = 0
+        while(feature_start_width <= (input_matrix.shape[1] - feature_width)):
+            feature_stop_height = feature_start_height + feature_height
+            feature_stop_width = feature_start_width + feature_width
+            check_matrix = input_matrix[feature_start_height:feature_stop_height, feature_start_width:feature_stop_width]
+            # obviously an exact match is not particularly likely to be found. This needs to be made more robust
+            if(np.array_equiv(check_matrix, feature_matrix)):
+                # maybe replace this with a yield, or make a list of matches. In case of multiple matches.
+                # for now, just state coordinates where the feature was found.
+                return [feature_start_height, feature_start_width]
+            feature_start_width = feature_start_width + 1
+        feature_start_height = feature_start_height + 1
+    return []
+
 parser = argparse.ArgumentParser()
 parser.add_argument("inputfile", help="input path to the test file")
 
@@ -116,12 +154,6 @@ for i in train:
 
 test_example = test[0]
 
-# Print the data
-print(f"training data length: {training_len}")
-for j in range(training_len):
-    print(f"training data {j}: \n{training_example_list[j]}")
-print(f"test data: \n{test_example}")
-
 # parse input and output arrays per example
 training_input = {}
 training_output = {}
@@ -133,7 +165,7 @@ test_output = np.array((test_example)["output"])
 
 # okay, now the only thing to do is to convert the inputs into an output using a single method...
 
-# Here is an example sequence of transforms to solve 007bbfb7.json
+# iterate over all examples in a training set then try to solve the test example.
 for k in range(training_len + 1):
     input_matrix = test_input
     output_check = test_output
@@ -141,10 +173,13 @@ for k in range(training_len + 1):
         input_matrix = training_input[k]
         output_check = training_output[k]
 
-    test_mask = run_transform_on_matrix(input_matrix, transform_type.identity, None)
-    output_matrix = run_transform_on_matrix(test_mask, transform_type.scale_board, [9,9])
-    output_matrix = run_transform_on_matrix(output_matrix, transform_type.scale, 3)
-    output_matrix = run_transform_on_matrix(output_matrix, transform_type.mask, test_mask)
+    # extremely simple test: just try and see if the output matrix exists in the input matrix
+    feature_coords = find_feature_in_matrix(input_matrix, output_check)
+    if not feature_coords:
+        print(f"{input_file} does not have the output feature in the input!!!")
+        break
+
 
     # output whether output matrix is equivalent to the expected output.
-    print(f"The output matrix and test output are equal: {np.array_equiv(output_matrix, output_check)}")
+    print(f"feature was found at: {feature_coords}")
+    # print(f"The output matrix and test output are equal: {np.array_equiv(output_matrix, output_check)}")
