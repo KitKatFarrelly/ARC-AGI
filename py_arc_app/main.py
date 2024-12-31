@@ -132,54 +132,95 @@ def find_feature_in_matrix(input_matrix, feature_matrix):
         feature_start_height = feature_start_height + 1
     return []
 
+# this function just tries to find the similar traits between a set of features
+# ideally, for these comparison functions, the program should be able to discover
+# different types of traits between features and matrices.
+# maybe attention matrices could be used for this task?
+# feature traits should be able to be simplified and transformationally disctinct from other traits.
+# feature traits should be defined robustly in terms of attention - they should start overtuned and
+# become more general as they are trained.
+def compare_feature_traits(list_of_features_to_compare):
+    # traits to compare:
+    # symmetry
+    # color
+    # similarity
+    # rotational/mirrored
+    # size
+    # subfeatures inside feature
+    # relative/absolute location
+    # occlusion vs another feature
+    pass
+
+# this function just tries to find the similar traits between a set of matrices
+def compare_matrix_traits(list_of_matrices_to_compare):
+    # traits to compare:
+    # size
+    # number of features
+    # number of copies of any given feature
+    pass
+
+def open_test_file_and_test(input_dir, input_file):
+
+    input_path = os.path.join(input_dir, input_file)
+    with open(input_path, 'r') as file:
+        data = json.load(file)
+
+    print(f"opened {input_file}...")
+
+    # Split test and training data
+    test = data["test"]
+    train = data["train"]
+    training_len = len(train)
+    test_len = len(test)
+
+    # Divide Training data into a list of examples
+    training_example_list = []
+    for i in train:
+        training_example_list.append(i)
+
+    test_example = test[0]
+
+    # parse input and output arrays per example
+    training_input = {}
+    training_output = {}
+    for j in range(training_len):
+        training_input[j] = np.array((training_example_list[j])["input"])
+        training_output[j] = np.array((training_example_list[j])["output"])
+    test_input = np.array((test_example)["input"])
+    test_output = np.array((test_example)["output"])
+
+    # okay, now the only thing to do is to convert the inputs into an output using a single method...
+
+    # iterate over all examples in a training set then try to solve the test example.
+    for k in range(training_len + 1):
+        input_matrix = test_input
+        output_check = test_output
+        if(k < training_len):
+            input_matrix = training_input[k]
+            output_check = training_output[k]
+
+        # extremely simple test: just try and see if the output matrix exists in the input matrix
+        feature_coords = find_feature_in_matrix(input_matrix, output_check)
+        if not feature_coords:
+            print(f"{input_file} does not have the output feature in the input!!!")
+            break
+
+
+        # output whether output matrix is equivalent to the expected output.
+        print(f"feature was found at: {feature_coords}")
+        # print(f"The output matrix and test output are equal: {np.array_equiv(output_matrix, output_check)}")
+
 parser = argparse.ArgumentParser()
-parser.add_argument("inputfile", help="input path to the test file")
+parser.add_argument("inputdir", help="input path to the test directory")
 
 args = parser.parse_args()
-input_file = os.path.abspath(args.inputfile)
+input_dir = os.path.abspath(args.inputdir)
 
-with open(input_file, 'r') as file:
-    data = json.load(file)
-
-# Split test and training data
-test = data["test"]
-train = data["train"]
-training_len = len(train)
-test_len = len(test)
-
-# Divide Training data into a list of examples
-training_example_list = []
-for i in train:
-    training_example_list.append(i)
-
-test_example = test[0]
-
-# parse input and output arrays per example
-training_input = {}
-training_output = {}
-for j in range(training_len):
-    training_input[j] = np.array((training_example_list[j])["input"])
-    training_output[j] = np.array((training_example_list[j])["output"])
-test_input = np.array((test_example)["input"])
-test_output = np.array((test_example)["output"])
-
-# okay, now the only thing to do is to convert the inputs into an output using a single method...
-
-# iterate over all examples in a training set then try to solve the test example.
-for k in range(training_len + 1):
-    input_matrix = test_input
-    output_check = test_output
-    if(k < training_len):
-        input_matrix = training_input[k]
-        output_check = training_output[k]
-
-    # extremely simple test: just try and see if the output matrix exists in the input matrix
-    feature_coords = find_feature_in_matrix(input_matrix, output_check)
-    if not feature_coords:
-        print(f"{input_file} does not have the output feature in the input!!!")
-        break
-
-
-    # output whether output matrix is equivalent to the expected output.
-    print(f"feature was found at: {feature_coords}")
-    # print(f"The output matrix and test output are equal: {np.array_equiv(output_matrix, output_check)}")
+if(os.path.isdir(input_dir)):
+    for input_file in os.listdir(input_dir):
+        open_test_file_and_test(input_dir, input_file)
+elif(os.path.isfile(input_dir)):
+    head_tail = os.path.split(input_dir)
+    open_test_file_and_test(head_tail[0], head_tail[1])
+else:
+    print("not a directory or file!")
