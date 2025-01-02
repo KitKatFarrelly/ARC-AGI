@@ -132,6 +132,19 @@ def find_feature_in_matrix(input_matrix, feature_matrix):
         feature_start_height = feature_start_height + 1
     return []
 
+
+def find_feature_from_traits(input_matrix, feature_traits):
+    pass
+
+def convert_traits_to_coordinates(feature_traits):
+    pass
+
+# this function just decides the correct actions to take given a list of features, and a list of traits of those features
+# this function will decide whether to do rotation, cropping, translation, etc depending on similar and differing traits
+# outputs the action to take and the relevant transform data
+def decide_action_for_features(feature_list, feature_traits, matrix_traits):
+    pass
+
 # this function just tries to find the similar traits between a set of features
 # ideally, for these comparison functions, the program should be able to discover
 # different types of traits between features and matrices.
@@ -190,6 +203,7 @@ def open_test_file_and_test(input_dir, input_file):
     test_output = np.array((test_example)["output"])
 
     # okay, now the only thing to do is to convert the inputs into an output using a single method...
+    known_traits = []
 
     # iterate over all examples in a training set then try to solve the test example.
     for k in range(training_len + 1):
@@ -199,12 +213,23 @@ def open_test_file_and_test(input_dir, input_file):
             input_matrix = training_input[k]
             output_check = training_output[k]
 
+        feature_coords = find_feature_from_traits(input_matrix, known_traits)
+        
         # extremely simple test: just try and see if the output matrix exists in the input matrix
         feature_coords = find_feature_in_matrix(input_matrix, output_check)
         if not feature_coords:
             print(f"{input_file} does not have the output feature in the input!!!")
             break
 
+        # need to find all features here
+        correct_feature = input_matrix
+        feature_list = find_features_in_matrix(input_matrix)
+
+        #compare traits of correct feature with output
+        compare_feature_traits([output_check, correct_feature])
+
+        #compare traits of correct feature in input with incorrect features in input
+        compare_feature_traits(feature_list)
 
         # output whether output matrix is equivalent to the expected output.
         print(f"feature was found at: {feature_coords}")
