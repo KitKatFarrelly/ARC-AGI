@@ -77,10 +77,32 @@ def calculate_loss(input_matrix, output_matrix) -> float:
     loss = loss / (input_matrix.shape[0] * input_matrix.shape[1])
     return loss
 
+class feature_type(Enum):
+    dfs_feature = 1
+    combined_dfs_feature = 2
+    matrix_feature = 3
+
 # returns list of features extracted via dfs in a matrix.
 # also needs to be able to find features by splitting matrix into sections
-def find_features_in_matrix(input_matrix):
-    pass
+def get_feature_list_from_matrix(input_matrix, type, feature_data):
+    feature_list = []
+    if(type is feature_type.matrix_feature):
+        input_matrix_height = input_matrix.shape[0]
+        input_matrix_width = input_matrix.shape[1]
+        feature_matrix_height = feature_data[0]
+        feature_matrix_width = feature_data[1]
+        current_height = 0
+        while(current_height < input_matrix_height):
+            current_width = 0
+            while(current_width < input_matrix_width):
+                feature_height_end = current_height + feature_matrix_height
+                feature_width_end = current_width + feature_matrix_width
+                output_matrix = input_matrix[current_height:feature_height_end, current_width:feature_width_end]
+                output_location = (output_matrix, current_height, current_width)
+                feature_list.append(output_location)
+                current_width = current_width + feature_matrix_width
+            current_height = current_height + feature_matrix_height
+    return feature_list
 
 # in cases where the set of transforms to solve is dependent on some branching feature,
 # this function inputs a matrix and branch set and outputs which element in the set
@@ -133,8 +155,27 @@ def find_feature_in_matrix(input_matrix, feature_matrix):
     return []
 
 
+class trait_type(Enum):
+    symmetry = 1
+    color = 2
+    similarity = 3
+    rotate = 4
+    mirror = 5
+    size = 6
+    translational = 7
+    occlusion = 8
+
+class matrix_trait_type(Enum):
+    size = 1
+    feature_count = 2
+    copies_of_feature = 3
+
 def find_feature_from_traits(input_matrix, feature_traits):
-    pass
+    for traits in feature_traits:
+        if(traits[0] is trait_type.similarity):
+            return input_matrix[traits[1]:(traits[1] + traits[3]), traits[2]:(traits[2] + traits[4])]
+    return []
+            
 
 def convert_traits_to_coordinates(feature_traits):
     pass
@@ -162,7 +203,13 @@ def compare_feature_traits(list_of_features_to_compare):
     # subfeatures inside feature
     # relative/absolute location
     # occlusion vs another feature
-    pass
+    output_traits = []
+    for feature1 in list_of_features_to_compare:
+        if(feature1 is list_of_features_to_compare[-1]):
+            break
+        if(np.array_equiv(feature1[0], (list_of_features_to_compare[-1])[0])):
+                output_traits.append((trait_type.similarity, feature1[1], feature1[2], feature1[0].shape[0], feature1[0].shape[1]))
+    return output_traits
 
 # this function just tries to find the similar traits between a set of matrices
 def compare_matrix_traits(list_of_matrices_to_compare):
@@ -212,28 +259,40 @@ def open_test_file_and_test(input_dir, input_file):
         if(k < training_len):
             input_matrix = training_input[k]
             output_check = training_output[k]
-
-        feature_coords = find_feature_from_traits(input_matrix, known_traits)
         
-        # extremely simple test: just try and see if the output matrix exists in the input matrix
-        feature_coords = find_feature_in_matrix(input_matrix, output_check)
-        if not feature_coords:
-            print(f"{input_file} does not have the output feature in the input!!!")
-            break
+        found_feature = find_feature_from_traits(input_matrix, known_traits)
 
-        # need to find all features here
-        correct_feature = input_matrix
-        feature_list = find_features_in_matrix(input_matrix)
+        was_feature_found = (np.array_equiv(found_feature, output_check))
+
+        if(k < training_len):
+            if not was_feature_found:
+                # need to find all features here
+                # TODO: add dfs features
+                # NOTE: for now, just get list of features based on output feature
+                feature_list = get_feature_list_from_matrix(input_matrix, feature_type.matrix_feature, output_check.shape)
+
+                # TODO: for now, just append output check to feature list
+                feature_list.append((output_check, 0, 0))
+
+                known_traits = compare_feature_traits(feature_list)
+
+            if not known_traits:
+                print(f"no matching traits found between input features and output for {input_file}")
+                break
+        else:
+            # the final training set should just test if we found the solution from known features:
+            if was_feature_found:
+                # output whether output matrix is equivalent to the expected output.
+                print(f"feature was found with trait: {known_traits}")
+                return True
+            else:
+                return False
 
         #compare traits of correct feature with output
-        compare_feature_traits([output_check, correct_feature])
+        #compare_feature_traits([output_check, correct_feature])
 
         #compare traits of correct feature in input with incorrect features in input
-        compare_feature_traits(feature_list)
-
-        # output whether output matrix is equivalent to the expected output.
-        print(f"feature was found at: {feature_coords}")
-        # print(f"The output matrix and test output are equal: {np.array_equiv(output_matrix, output_check)}")
+        #compare_feature_traits(feature_list)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("inputdir", help="input path to the test directory")
@@ -241,11 +300,18 @@ parser.add_argument("inputdir", help="input path to the test directory")
 args = parser.parse_args()
 input_dir = os.path.abspath(args.inputdir)
 
+solved_problems = 0
+
 if(os.path.isdir(input_dir)):
     for input_file in os.listdir(input_dir):
-        open_test_file_and_test(input_dir, input_file)
+        if open_test_file_and_test(input_dir, input_file):
+            solved_problems = solved_problems + 1
+        
 elif(os.path.isfile(input_dir)):
     head_tail = os.path.split(input_dir)
-    open_test_file_and_test(head_tail[0], head_tail[1])
+    if open_test_file_and_test(head_tail[0], head_tail[1]):
+        solved_problems = solved_problems + 1
 else:
     print("not a directory or file!")
+
+print(f"number of solved problems is now {solved_problems}")
