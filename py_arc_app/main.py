@@ -82,6 +82,35 @@ class feature_type(Enum):
     combined_dfs_feature = 2
     matrix_feature = 3
 
+# dfs on matrix. returns modified visited_matrix
+def run_dfs_on_location(input_matrix, visited_matrix, start_height, start_width, feature_color):
+    if(start_height < 0 or start_width < 0 or start_height >= input_matrix.shape[0] or start_height >= input_matrix.shape[0]):
+        return visited_matrix
+    if(visited_matrix[start_height, start_width] == 1):
+        return visited_matrix
+    new_color = input_matrix[start_height, start_width]
+    if(feature_color is not new_color):
+        return visited_matrix
+    # add location to mask
+    visited_matrix[start_height, start_width] = 1
+    # run dfs in all 8 directions
+    # priorities:
+    # 1 2 3
+    # 4 _ 5
+    # 6 7 8
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height - 1, start_width - 1, feature_color)
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height - 1, start_width, feature_color)
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height - 1, start_width + 1, feature_color)
+
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height, start_width - 1, feature_color)
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height, start_width + 1, feature_color)
+
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height + 1, start_width - 1, feature_color)
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height + 1, start_width, feature_color)
+    visited_matrix = run_dfs_on_location(input_matrix, visited_matrix, start_height + 1, start_width + 1, feature_color)
+    return visited_matrix
+    
+
 # returns list of features extracted via dfs in a matrix.
 # also needs to be able to find features by splitting matrix into sections
 def get_feature_list_from_matrix(input_matrix, type, feature_data):
@@ -102,6 +131,31 @@ def get_feature_list_from_matrix(input_matrix, type, feature_data):
                 feature_list.append(output_location)
                 current_width = current_width + feature_matrix_width
             current_height = current_height + feature_matrix_height
+    elif(type is feature_type.dfs_feature):
+        # this is just a standard dfs algorithm. edges are determined by color change. adjacency is in all 8 directions.
+        input_matrix_height = input_matrix.shape[0]
+        input_matrix_width = input_matrix.shape[1]
+        # keep track of visited nodes with a matrix of equal size. only used inside the function
+        visited_matrix = np.zeros(shape=(input_matrix_height, input_matrix_width))
+        current_height = 0
+        while(current_height < input_matrix_height):
+            current_width = 0
+            while(current_width < input_matrix_width):
+                if(visited_matrix[current_height, current_width] == 1):
+                    continue
+                # this should not happen.
+                if(visited_matrix[current_height, current_width] > 1):
+                    print("invalid value in visited matrix!!!")
+                    exit()
+                feature_color = input_matrix[current_height, current_width]
+                feature_mask = run_dfs_on_location(input_matrix, visited_matrix, current_height, current_width, feature_color)
+                # for now, just output visited mask and location of initial tile.
+                output_feature = (np.subtract(feature_mask - visited_matrix), current_height, current_width)
+                # add masks together. this should lead to only ones and zeroes I think.
+                visited_matrix = feature_mask
+                feature_list.append(output_feature)
+                current_width = current_width + 1
+            current_height = current_height + 1
     return feature_list
 
 # in cases where the set of transforms to solve is dependent on some branching feature,
