@@ -240,6 +240,11 @@ def convert_traits_to_coordinates(feature_traits):
 def decide_action_for_features(feature_list, feature_traits, matrix_traits):
     pass
 
+class trait_object:
+    def __init__(self, trait, trait_data):
+        self.trait = trait
+        self.trait_data = trait_data
+
 # this function just tries to find the similar traits between a set of features
 # ideally, for these comparison functions, the program should be able to discover
 # different types of traits between features and matrices.
@@ -257,12 +262,21 @@ def compare_feature_traits(list_of_features_to_compare):
     # subfeatures inside feature
     # relative/absolute location
     # occlusion vs another feature
-    output_traits = []
-    for feature1 in list_of_features_to_compare:
-        if(feature1 is list_of_features_to_compare[-1]):
-            break
-        if(np.array_equiv(feature1[0], (list_of_features_to_compare[-1])[0])):
-                output_traits.append((trait_type.similarity, feature1[1], feature1[2], feature1[0].shape[0], feature1[0].shape[1]))
+
+    # first find size of feature list and create a 2D matrix of feature trait lists
+    number_of_features = len(list_of_features_to_compare)
+    output_traits = [[[] for i in range(number_of_features)] for j in range(number_of_features)]
+
+    # next, iterate over every combination of 2 features and create an object of their shared traits
+    for current_row in range(number_of_features):
+        for current_column in range(number_of_features):
+            # prevents duplicate trait finding
+            if((current_row > current_column) or (current_row == current_column)):
+                continue
+            first_feature = list_of_features_to_compare[current_row]
+            second_feature = list_of_features_to_compare[current_column]
+            if(np.array_equiv(first_feature[0], second_feature[0])):
+                (output_traits[current_row][current_column]).append((trait_type.similarity, first_feature[1], first_feature[2], first_feature[0].shape[0], first_feature[0].shape[1]))
     return output_traits
 
 # this function just tries to find the similar traits between a set of matrices
@@ -319,19 +333,33 @@ def open_test_file_and_test(input_dir, input_file):
         was_feature_found = (np.array_equiv(found_feature, output_check))
 
         if(k < training_len):
-            if not was_feature_found:
-                # need to find all features here
-                # TODO: add dfs features
-                # NOTE: for now, just get list of features based on output feature
-                feature_list = get_feature_list_from_matrix(input_matrix, feature_type.matrix_feature, output_check.shape)
+            # need to find all features here
+            # TODO: add dfs features
+            # NOTE: for now, just get list of features based on output feature
+            feature_list = get_feature_list_from_matrix(input_matrix, feature_type.matrix_feature, output_check.shape)
 
-                # TODO: for now, just append output check to feature list
-                feature_list.append((output_check, 0, 0))
+            # TODO: for now, just append output check to feature list
+            feature_list.append((output_check, 0, 0))
 
-                known_traits = compare_feature_traits(feature_list)
+            trait_matrix = compare_feature_traits(feature_list)
+
+            new_known_traits = []
+
+            object_column = len(feature_list)
+            for current_row in range(object_column):
+                if(len(trait_matrix[current_row][object_column - 1]) > 0):
+                    print(f"trait list at location: {trait_matrix[current_row][object_column - 1]}")
+                    new_known_traits.append((trait_matrix[current_row][object_column - 1])[0])
+
+            # create set of known traits
+            if(k == 0):
+                known_traits = new_known_traits
+            else:
+                known_traits = set(known_traits) & set(new_known_traits)
 
             if not known_traits:
                 print(f"no matching traits found between input features and output for {input_file}")
+                
                 break
         else:
             # the final training set should just test if we found the solution from known features:
