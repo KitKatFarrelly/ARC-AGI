@@ -277,6 +277,10 @@ def compare_feature_traits(list_of_features_to_compare):
             second_feature = list_of_features_to_compare[current_column]
             if(np.array_equiv(first_feature[0], second_feature[0])):
                 (output_traits[current_row][current_column]).append((trait_type.similarity, first_feature[1], first_feature[2], first_feature[0].shape[0], first_feature[0].shape[1]))
+            if(first_feature[3] is feature_type.dfs_feature):
+                # detect if the masks are the same, if colors are the same, etc
+                pass
+
     return output_traits
 
 # this function just tries to find the similar traits between a set of matrices
