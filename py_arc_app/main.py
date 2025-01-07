@@ -82,17 +82,33 @@ class feature_type(Enum):
     combined_dfs_feature = 2
     matrix_feature = 3
 
+class dfs_feature_data:
+    def __init__(self, input_mask, start_height, start_width):
+        self.mask = input_mask
+        self.highest_point = start_height
+        self.lowest_point = start_height
+        self.left_point = start_width
+        self.right_point = start_width
+
 # dfs on matrix. returns modified visited_matrix
-def run_dfs_on_location(input_matrix, visited_matrix, start_height, start_width, feature_color):
+def run_dfs_on_location(input_matrix, visited_mask, start_height, start_width, feature_color):
     if(start_height < 0 or start_width < 0 or start_height >= input_matrix.shape[0] or start_height >= input_matrix.shape[0]):
-        return visited_matrix
-    if(visited_matrix[start_height, start_width] == 1):
-        return visited_matrix
+        return visited_mask
+    if(visited_mask.mask[start_height, start_width] == 1):
+        return visited_mask
     new_color = input_matrix[start_height, start_width]
     if(feature_color is not new_color):
-        return visited_matrix
+        return visited_mask
     # add location to mask
-    visited_matrix[start_height, start_width] = 1
+    visited_mask.mask[start_height, start_width] = 1
+    if(visited_mask.highest_point > start_height):
+        visited_mask.highest_point = start_height
+    if(visited_mask.lowest_point < start_height):
+        visited_mask.lowest_point = start_height
+    if(visited_mask.left_point > start_width):
+        visited_mask.left_point = start_width
+    if(visited_mask.right_point < start_width):
+        visited_mask.right_point = start_width
     # run dfs in all 8 directions
     # priorities:
     # 1 2 3
@@ -148,11 +164,17 @@ def get_feature_list_from_matrix(input_matrix, type, feature_data):
                     print("invalid value in visited matrix!!!")
                     exit()
                 feature_color = input_matrix[current_height, current_width]
-                feature_mask = run_dfs_on_location(input_matrix, visited_matrix, current_height, current_width, feature_color)
+                prev_matrix = np.copy(input_matrix)
+                feature_mask = dfs_feature_data(visited_matrix, current_height, current_width)
+                visited_mask = run_dfs_on_location(input_matrix, feature_mask, current_height, current_width, feature_color)
+                feature_mask = np.subtract(visited_mask.mask - prev_matrix)
+                # need to crop the mask to the height and width of the feature
+                cropped_mask = feature_mask[visited_mask.highest_point:visited_mask.lowest_point, visited_mask.left_point:visited_mask.right_point]
+                # re-add color data
+                cropped_mask = cropped_mask * input_matrix[current_height, current_width]
                 # for now, just output visited mask and location of initial tile.
-                output_feature = (np.subtract(feature_mask - visited_matrix), current_height, current_width)
-                # add masks together. this should lead to only ones and zeroes I think.
-                visited_matrix = feature_mask
+                output_feature = (cropped_mask, current_height, current_width)
+                visited_matrix = visited_mask.mask
                 feature_list.append(output_feature)
                 current_width = current_width + 1
             current_height = current_height + 1
