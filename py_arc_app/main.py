@@ -143,7 +143,7 @@ def get_feature_list_from_matrix(input_matrix, type, feature_data):
                 feature_height_end = current_height + feature_matrix_height
                 feature_width_end = current_width + feature_matrix_width
                 output_matrix = input_matrix[current_height:feature_height_end, current_width:feature_width_end]
-                output_location = (output_matrix, current_height, current_width)
+                output_location = (output_matrix, current_height, current_width, type)
                 feature_list.append(output_location)
                 current_width = current_width + feature_matrix_width
             current_height = current_height + feature_matrix_height
@@ -173,7 +173,7 @@ def get_feature_list_from_matrix(input_matrix, type, feature_data):
                 # re-add color data
                 cropped_mask = cropped_mask * input_matrix[current_height, current_width]
                 # for now, just output visited mask and location of initial tile.
-                output_feature = (cropped_mask, current_height, current_width)
+                output_feature = (cropped_mask, visited_mask.highest_point, visited_mask.left_point, type)
                 visited_matrix = visited_mask.mask
                 feature_list.append(output_feature)
                 current_width = current_width + 1
@@ -267,6 +267,59 @@ class trait_object:
         self.trait = trait
         self.trait_data = trait_data
 
+def similarity_comparison(feature_1, feature_2):
+    is_similar = False
+    if(feature_1.shape == feature_2.shape):
+        # iterate to check that edges exist at same locations in the features
+        is_similar = True
+        for row in range(feature_1.shape[0]):
+            if(not is_similar):
+                break
+            for column in range(feature_1.shape[1]):
+                if(feature_1.shape[0] < row):
+                    feature_1_no_edge = (feature_1[row, column] == feature_1[row + 1, column])
+                    feature_2_no_edge = (feature_2[row, column] == feature_2[row + 1, column])
+                    is_similar = (feature_1_no_edge == feature_2_no_edge)
+                    if(not is_similar):
+                        break
+                if(feature_1.shape[1] < column):
+                    feature_1_no_edge = (feature_1[row, column] == feature_1[row, column + 1])
+                    feature_2_no_edge = (feature_2[row, column] == feature_2[row, column + 1])
+                    is_similar = (feature_1_no_edge == feature_2_no_edge)
+                    if(not is_similar):
+                        break
+                if((feature_1.shape[0] < row) and (feature_1.shape[1] < column)):
+                    feature_1_no_edge = (feature_1[row, column] == feature_1[row + 1, column + 1])
+                    feature_2_no_edge = (feature_2[row, column] == feature_2[row + 1, column + 1])
+                    is_similar = (feature_1_no_edge == feature_2_no_edge)
+                    if(not is_similar):
+                        break
+    # TODO: should check subsections of each feature to find similarities
+    # maybe call a different function to do this?
+    # for now just return none
+    return is_similar
+
+def color_comparison(feature_1, feature_2):
+    pass
+
+def rotation_comparison(feature_1, feature_2):
+    pass
+
+def translation_comparison(feature_1, feature_2):
+    pass
+
+def is_feature_symmetrical(feature_1):
+    pass
+
+def subfeature_detection(feature_1):
+    pass
+
+def occlusion_detection(feature_1, feature_2):
+    pass
+
+def check_adjacency(feature_1, feature_2):
+    pass
+
 # this function just tries to find the similar traits between a set of features
 # ideally, for these comparison functions, the program should be able to discover
 # different types of traits between features and matrices.
@@ -297,7 +350,7 @@ def compare_feature_traits(list_of_features_to_compare):
                 continue
             first_feature = list_of_features_to_compare[current_row]
             second_feature = list_of_features_to_compare[current_column]
-            if(np.array_equiv(first_feature[0], second_feature[0])):
+            if(similarity_comparison(first_feature[0], second_feature[0])):
                 (output_traits[current_row][current_column]).append((trait_type.similarity, first_feature[1], first_feature[2], first_feature[0].shape[0], first_feature[0].shape[1]))
             if(first_feature[3] is feature_type.dfs_feature):
                 # detect if the masks are the same, if colors are the same, etc
@@ -365,7 +418,7 @@ def open_test_file_and_test(input_dir, input_file):
             feature_list = get_feature_list_from_matrix(input_matrix, feature_type.matrix_feature, output_check.shape)
 
             # TODO: for now, just append output check to feature list
-            feature_list.append((output_check, 0, 0))
+            feature_list.append((output_check, 0, 0, feature_type.matrix_feature))
 
             trait_matrix = compare_feature_traits(feature_list)
 
