@@ -268,14 +268,18 @@ class trait_object:
         self.trait_data = trait_data
 
 def similarity_comparison(feature_1, feature_2):
+    is_matching = False
     is_similar = False
     if(feature_1.shape == feature_2.shape):
         # iterate to check that edges exist at same locations in the features
+        is_matching = True
         is_similar = True
         for row in range(feature_1.shape[0]):
             if(not is_similar):
                 break
             for column in range(feature_1.shape[1]):
+                if(feature_1[row, column] != feature_2[row, column]):
+                    is_matching = False
                 if(feature_1.shape[0] < row):
                     feature_1_no_edge = (feature_1[row, column] == feature_1[row + 1, column])
                     feature_2_no_edge = (feature_2[row, column] == feature_2[row + 1, column])
@@ -297,7 +301,7 @@ def similarity_comparison(feature_1, feature_2):
     # TODO: should check subsections of each feature to find similarities
     # maybe call a different function to do this?
     # for now just return none
-    return is_similar
+    return (is_similar,is_matching)
 
 def color_comparison(feature_1, feature_2):
     pass
@@ -350,8 +354,10 @@ def compare_feature_traits(list_of_features_to_compare):
                 continue
             first_feature = list_of_features_to_compare[current_row]
             second_feature = list_of_features_to_compare[current_column]
-            if(similarity_comparison(first_feature[0], second_feature[0])):
-                (output_traits[current_row][current_column]).append((trait_type.similarity, first_feature[1], first_feature[2], first_feature[0].shape[0], first_feature[0].shape[1]))
+            is_similar, is_matching = similarity_comparison(first_feature[0], second_feature[0])
+            if(is_similar):
+                similarity_trait = trait_object(trait_type.similarity, (is_matching, first_feature[1], first_feature[2], second_feature[1], second_feature[2]))
+                (output_traits[current_row][current_column]).append(similarity_trait)
             if(first_feature[3] is feature_type.dfs_feature):
                 # detect if the masks are the same, if colors are the same, etc
                 pass
@@ -418,6 +424,7 @@ def open_test_file_and_test(input_dir, input_file):
             feature_list = get_feature_list_from_matrix(input_matrix, feature_type.matrix_feature, output_check.shape)
 
             # TODO: for now, just append output check to feature list
+            # TODO: features need to be associated with a matrix
             feature_list.append((output_check, 0, 0, feature_type.matrix_feature))
 
             trait_matrix = compare_feature_traits(feature_list)
