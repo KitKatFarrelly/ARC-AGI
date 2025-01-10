@@ -15,6 +15,39 @@ class transform_type(Enum):
     scale_board = 7
     mask = 8
 
+class feature_type(Enum):
+    dfs_feature = 1
+    combined_dfs_feature = 2
+    matrix_feature = 3
+
+class trait_type(Enum):
+    symmetry = 1
+    color = 2
+    similarity = 3
+    rotate = 4
+    mirror = 5
+    size = 6
+    translational = 7
+    occlusion = 8
+
+class matrix_trait_type(Enum):
+    size = 1
+    feature_count = 2
+    copies_of_feature = 3
+
+class dfs_feature_data:
+    def __init__(self, input_mask, start_height, start_width):
+        self.mask = input_mask
+        self.highest_point = start_height
+        self.lowest_point = start_height
+        self.left_point = start_width
+        self.right_point = start_width
+
+class trait_object:
+    def __init__(self, trait, trait_data):
+        self.trait = trait
+        self.trait_data = trait_data
+
 # runs a single transformation on a matrix and returns an output matrix with that transform
 def run_transform_on_matrix(input_matrix, transform, transform_data):
     if(transform is transform_type.identity):
@@ -77,19 +110,6 @@ def calculate_loss(input_matrix, output_matrix) -> float:
     loss = loss / (input_matrix.shape[0] * input_matrix.shape[1])
     return loss
 
-class feature_type(Enum):
-    dfs_feature = 1
-    combined_dfs_feature = 2
-    matrix_feature = 3
-
-class dfs_feature_data:
-    def __init__(self, input_mask, start_height, start_width):
-        self.mask = input_mask
-        self.highest_point = start_height
-        self.lowest_point = start_height
-        self.left_point = start_width
-        self.right_point = start_width
-
 # dfs on matrix. returns modified visited_matrix
 def run_dfs_on_location(input_matrix, visited_mask, start_height, start_width, feature_color):
     if(start_height < 0 or start_width < 0 or start_height >= input_matrix.shape[0] or start_height >= input_matrix.shape[0]):
@@ -129,7 +149,7 @@ def run_dfs_on_location(input_matrix, visited_mask, start_height, start_width, f
 
 # returns list of features extracted via dfs in a matrix.
 # also needs to be able to find features by splitting matrix into sections
-def get_feature_list_from_matrix(input_matrix, type, feature_data):
+def get_feature_list_from_matrix(input_matrix, type, feature_data, matrix_key):
     feature_list = []
     if(type is feature_type.matrix_feature):
         input_matrix_height = input_matrix.shape[0]
@@ -143,7 +163,7 @@ def get_feature_list_from_matrix(input_matrix, type, feature_data):
                 feature_height_end = current_height + feature_matrix_height
                 feature_width_end = current_width + feature_matrix_width
                 output_matrix = input_matrix[current_height:feature_height_end, current_width:feature_width_end]
-                output_location = (output_matrix, current_height, current_width, type)
+                output_location = (output_matrix, current_height, current_width, type, matrix_key)
                 feature_list.append(output_location)
                 current_width = current_width + feature_matrix_width
             current_height = current_height + feature_matrix_height
@@ -173,7 +193,7 @@ def get_feature_list_from_matrix(input_matrix, type, feature_data):
                 # re-add color data
                 cropped_mask = cropped_mask * input_matrix[current_height, current_width]
                 # for now, just output visited mask and location of initial tile.
-                output_feature = (cropped_mask, visited_mask.highest_point, visited_mask.left_point, type)
+                output_feature = (cropped_mask, visited_mask.highest_point, visited_mask.left_point, type, matrix_key)
                 visited_matrix = visited_mask.mask
                 feature_list.append(output_feature)
                 current_width = current_width + 1
@@ -230,26 +250,12 @@ def find_feature_in_matrix(input_matrix, feature_matrix):
         feature_start_height = feature_start_height + 1
     return []
 
-
-class trait_type(Enum):
-    symmetry = 1
-    color = 2
-    similarity = 3
-    rotate = 4
-    mirror = 5
-    size = 6
-    translational = 7
-    occlusion = 8
-
-class matrix_trait_type(Enum):
-    size = 1
-    feature_count = 2
-    copies_of_feature = 3
-
 def find_feature_from_traits(input_matrix, feature_traits):
     for traits in feature_traits:
-        if(traits[0] is trait_type.similarity):
-            return input_matrix[traits[1]:(traits[1] + traits[3]), traits[2]:(traits[2] + traits[4])]
+        if(traits.trait is trait_type.similarity):
+            trait_data = traits.trait_data
+            print(f"trait data: {trait_data}")
+            return input_matrix[trait_data[1]:(trait_data[1] + trait_data[3]), trait_data[2]:(trait_data[2] + trait_data[4])]
     return []
             
 
@@ -262,10 +268,7 @@ def convert_traits_to_coordinates(feature_traits):
 def decide_action_for_features(feature_list, feature_traits, matrix_traits):
     pass
 
-class trait_object:
-    def __init__(self, trait, trait_data):
-        self.trait = trait
-        self.trait_data = trait_data
+
 
 def similarity_comparison(feature_1, feature_2):
     is_matching = False
@@ -280,19 +283,19 @@ def similarity_comparison(feature_1, feature_2):
             for column in range(feature_1.shape[1]):
                 if(feature_1[row, column] != feature_2[row, column]):
                     is_matching = False
-                if(feature_1.shape[0] < row):
+                if(feature_1.shape[0] > row + 1):
                     feature_1_no_edge = (feature_1[row, column] == feature_1[row + 1, column])
                     feature_2_no_edge = (feature_2[row, column] == feature_2[row + 1, column])
                     is_similar = (feature_1_no_edge == feature_2_no_edge)
                     if(not is_similar):
                         break
-                if(feature_1.shape[1] < column):
+                if(feature_1.shape[1] > column + 1):
                     feature_1_no_edge = (feature_1[row, column] == feature_1[row, column + 1])
                     feature_2_no_edge = (feature_2[row, column] == feature_2[row, column + 1])
                     is_similar = (feature_1_no_edge == feature_2_no_edge)
                     if(not is_similar):
                         break
-                if((feature_1.shape[0] < row) and (feature_1.shape[1] < column)):
+                if((feature_1.shape[0] > row + 1) and (feature_1.shape[1] > column + 1)):
                     feature_1_no_edge = (feature_1[row, column] == feature_1[row + 1, column + 1])
                     feature_2_no_edge = (feature_2[row, column] == feature_2[row + 1, column + 1])
                     is_similar = (feature_1_no_edge == feature_2_no_edge)
@@ -421,11 +424,11 @@ def open_test_file_and_test(input_dir, input_file):
             # need to find all features here
             # TODO: add dfs features
             # NOTE: for now, just get list of features based on output feature
-            feature_list = get_feature_list_from_matrix(input_matrix, feature_type.matrix_feature, output_check.shape)
+            feature_list = get_feature_list_from_matrix(input_matrix, feature_type.matrix_feature, output_check.shape, 0)
 
             # TODO: for now, just append output check to feature list
             # TODO: features need to be associated with a matrix
-            feature_list.append((output_check, 0, 0, feature_type.matrix_feature))
+            feature_list.append((output_check, 0, 0, feature_type.matrix_feature, 1))
 
             trait_matrix = compare_feature_traits(feature_list)
 
@@ -434,13 +437,15 @@ def open_test_file_and_test(input_dir, input_file):
             object_column = len(feature_list)
             for current_row in range(object_column):
                 if(len(trait_matrix[current_row][object_column - 1]) > 0):
-                    print(f"trait list at location: {trait_matrix[current_row][object_column - 1]}")
-                    new_known_traits.append((trait_matrix[current_row][object_column - 1])[0])
+                    new_trait_object = (trait_matrix[current_row][object_column - 1])[0]
+                    print(f"first trait at location: {new_trait_object.trait_data}")
+                    new_known_traits.append(new_trait_object)
 
             # create set of known traits
             if(k == 0):
                 known_traits = new_known_traits
             else:
+                # TODO: this needs to be more than just a set check
                 known_traits = set(known_traits) & set(new_known_traits)
 
             if not known_traits:
