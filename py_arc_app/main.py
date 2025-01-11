@@ -359,8 +359,10 @@ def compare_feature_traits(list_of_features_to_compare):
             second_feature = list_of_features_to_compare[current_column]
             is_similar, is_matching = similarity_comparison(first_feature[0], second_feature[0])
             if(is_similar):
-                similarity_trait = trait_object(trait_type.similarity, (is_matching, first_feature[1], first_feature[2], second_feature[1], second_feature[2]))
+                similarity_trait = trait_object(trait_type.similarity, is_matching)
                 (output_traits[current_row][current_column]).append(similarity_trait)
+                # append feature to opposite side as well. This is to make searching the matrix simpler
+                (output_traits[current_column][current_row]).append(similarity_trait)
             if(first_feature[3] is feature_type.dfs_feature):
                 # detect if the masks are the same, if colors are the same, etc
                 pass
@@ -434,6 +436,7 @@ def open_test_file_and_test(input_dir, input_file):
 
             new_known_traits = []
 
+            # TODO: replace with trait-to-transform function
             object_column = len(feature_list)
             for current_row in range(object_column):
                 if(len(trait_matrix[current_row][object_column - 1]) > 0):
@@ -441,12 +444,12 @@ def open_test_file_and_test(input_dir, input_file):
                     print(f"first trait at location: {new_trait_object.trait_data}")
                     new_known_traits.append(new_trait_object)
 
-            # create set of known traits
-            if(k == 0):
-                known_traits = new_known_traits
-            else:
-                # TODO: this needs to be more than just a set check
-                known_traits = set(known_traits) & set(new_known_traits)
+#            # create set of known traits
+#            if(k == 0):
+#                known_traits = new_known_traits
+#            else:
+#                # TODO: this needs to be more than just a set check
+#                known_traits = set(known_traits) & set(new_known_traits)
 
             if not known_traits:
                 print(f"no matching traits found between input features and output for {input_file}")
