@@ -265,8 +265,21 @@ def convert_traits_to_coordinates(feature_traits):
 # this function just decides the correct actions to take given a list of features, and a list of traits of those features
 # this function will decide whether to do rotation, cropping, translation, etc depending on similar and differing traits
 # outputs the action to take and the relevant transform data
-def decide_action_for_features(feature_list, feature_traits, matrix_traits):
-    pass
+def decide_action_for_features(feature_list, feature_traits):
+    feature_length = len(feature_list)
+    # iterate over traits on trait matrix
+    for first_index in range(feature_length):
+        for second_index in range(feature_length):
+            trait_list = feature_traits[first_index][second_index]
+            #iterate over traits in trait list at matrix location
+            for trait in trait_list:
+                # check for similarity traits then determine actions
+                if(trait.trait is trait_type.similarity):
+                    # if the traits match
+                    if(trait.trait_data is True):
+                        print(f"match found between trait {first_index} and trait {second_index}.")
+                        if((feature_list[first_index])[4]):
+                            print(f"this is a match with an output feature.")
 
 
 
@@ -436,13 +449,15 @@ def open_test_file_and_test(input_dir, input_file):
 
             new_known_traits = []
 
+            decide_action_for_features(feature_list, trait_matrix)
+            
             # TODO: replace with trait-to-transform function
-            object_column = len(feature_list)
-            for current_row in range(object_column):
-                if(len(trait_matrix[current_row][object_column - 1]) > 0):
-                    new_trait_object = (trait_matrix[current_row][object_column - 1])[0]
-                    print(f"first trait at location: {new_trait_object.trait_data}")
-                    new_known_traits.append(new_trait_object)
+#            object_column = len(feature_list)
+#            for current_row in range(object_column):
+#                if(len(trait_matrix[current_row][object_column - 1]) > 0):
+#                    new_trait_object = (trait_matrix[current_row][object_column - 1])[0]
+#                    print(f"first trait at location: {new_trait_object.trait_data}")
+#                    new_known_traits.append(new_trait_object)
 
 #            # create set of known traits
 #            if(k == 0):
