@@ -48,6 +48,11 @@ class trait_object:
         self.trait = trait
         self.trait_data = trait_data
 
+class action_object:
+    def __init__(self, action, action_data):
+        self.action = action
+        self.action_data = action_data
+
 # runs a single transformation on a matrix and returns an output matrix with that transform
 def run_transform_on_matrix(input_matrix, transform, transform_data):
     if(transform is transform_type.identity):
@@ -262,11 +267,11 @@ def find_feature_from_traits(input_matrix, feature_traits):
 def convert_traits_to_coordinates(feature_traits):
     pass
 
-# this function just decides the correct actions to take given a list of features, and a list of traits of those features
-# this function will decide whether to do rotation, cropping, translation, etc depending on similar and differing traits
-# outputs the action to take and the relevant transform data
+# this function takes a list of features from an input or intermediate matrix and an output feature.
+# It returns a list of actions related to transforming the input matrix so the output feature is matched.
 def decide_action_for_features(feature_list, feature_traits):
     feature_length = len(feature_list)
+    action_list = []
     # iterate over traits on trait matrix
     for first_index in range(feature_length):
         for second_index in range(feature_length):
@@ -280,8 +285,15 @@ def decide_action_for_features(feature_list, feature_traits):
                         print(f"match found between trait {first_index} and trait {second_index}.")
                         if((feature_list[first_index])[4]):
                             print(f"this is a match with an output feature.")
+                            # create move action and as data put the index of the output and input features from the feature list
+                            new_action = action_object(transform_type.move, [first_index, second_index])
+                            action_list.append(new_action)
+    return action_list
 
-
+# this function takes an input or intermediate matrix and an output matrix.
+# it returns a list of actions related to transforming the input matrix so the output matrix is matched.
+def decide_action_for_matrices(matrix_list, matrix_traits):
+    pass
 
 def similarity_comparison(feature_1, feature_2):
     is_matching = False
