@@ -34,6 +34,7 @@ class matrix_trait_type(Enum):
     size = 1
     feature_count = 2
     copies_of_feature = 3
+    copies_of_feature_trait = 4
 
 class dfs_feature_data:
     def __init__(self, input_mask, start_height, start_width):
@@ -395,7 +396,7 @@ def compare_feature_traits(list_of_features_to_compare):
     return output_traits
 
 # this function just tries to find the similar traits between a set of matrices
-def compare_matrix_traits(list_of_matrices_to_compare):
+def compare_matrix_traits(input_matrix, output_matrix):
     # traits to compare:
     # size
     # number of features
